@@ -2,6 +2,7 @@ import http, { IncomingMessage, ServerResponse } from "http";
 import { Handler, Route } from "../interfaces/router.interface";
 import { BodyParser } from "./body-parser";
 import { MiddlewareHandler } from "../interfaces/middleware.interface";
+import { RouteMiddleware } from "./route";
 
 export class Application {
   private routes: Route[] = [];
