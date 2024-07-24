@@ -7,14 +7,20 @@ export class Application {
   private routes: Route[] = [];
   private middlewareStack: MiddlewareHandler[] = [];
 
+  private routeMiddleware: Map<string, Map<string, RouteMiddleware>> =
+    new Map();
+
   get(path: string, handler: Handler) {
     this.routes.push({ path, method: "GET", handler });
     this.use(handler);
   }
 
-  use(...middleware: MiddlewareHandler[]) {
-    if (typeof middleware[0] === "string")
-      this.middlewareStack.push(...middleware);
+  use(
+    pathOrMiddleware: string | MiddlewareHandler,
+    ...middleware: MiddlewareHandler[]
+  ) {
+    if (typeof pathOrMiddleware === "string") this;
+    this.middlewareStack.push(...middleware);
   }
 
   async registerMiddleware(req: IncomingMessage, res: ServerResponse) {
