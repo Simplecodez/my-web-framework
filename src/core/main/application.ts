@@ -9,21 +9,36 @@ export class Application {
 
   get(path: string, handler: Handler) {
     this.routes.push({ path, method: "GET", handler });
+    this.use(handler);
   }
 
-  use(middleware: MiddlewareHandler) {
-    this.middlewareStack.push(middleware);
+  use(...middleware: MiddlewareHandler[]) {
+    if (typeof middleware[0] === "string")
+      this.middlewareStack.push(...middleware);
   }
 
-  async registerMiddleWare(req: IncomingMessage, res: ServerResponse) {
-    const index = 0;
-    let isNextCalled = false;
+  async registerMiddleware(req: IncomingMessage, res: ServerResponse) {
     for (let index = 0; index < this.middlewareStack.length; index++) {
-      await this.middlewareStack[index](req, res, () => {
-        isNextCalled = true;
-      });
+      let isNextCalled = false;
+      try {
+        const result = this.middlewareStack[index](req, res, (err: any) => {
+          if (err) {
+            throw err;
+          }
+          isNextCalled = true;
+        });
+        if ((result as any) instanceof Promise) {
+          await result;
+        }
+      } catch (error: any) {
+        console.log(error);
+        res.write(error?.message);
+        res.end();
+        break;
+      }
 
       if (!isNextCalled) {
+        console.log("I ran");
         break;
       }
     }
@@ -32,7 +47,7 @@ export class Application {
   listen(port: number, callback: () => void) {
     const server = http.createServer((req: IncomingMessage, res) => {
       // Handle middleware
-      this.registerMiddleWare(req, res);
+      this.registerMiddleware(req, res);
       // Handle routing
     });
 
@@ -46,17 +61,24 @@ app.listen(3000, () => {
 });
 
 app.use(async (req, res, next) => {
-  const bodyParser = new BodyParser(req, res);
-  req.body = await bodyParser.getBody(req);
-  console.log("eeeeeeeeeee");
+  const bodyParser = new BodyParser();
+  await bodyParser.extractData(req, res);
+  next();
 });
+
 app.use((req, res, next) => {
   console.log(new Date());
   console.log(req.body, "dddddddddddd");
   next();
 });
 
+app.use((req, res, next) => {
+  console.log(new Date());
+  console.log(req.body, "eeeeeeeeeeeeeeeeeee");
+  return;
+});
+
 app.get("/us", (req, res) => {
-  res.write("Welcome to reel.");
+  res.write(req.body.name + " " + "welcome");
   res.end();
 });
