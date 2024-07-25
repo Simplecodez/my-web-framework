@@ -1,40 +1,19 @@
 import { IncomingMessage, ServerResponse } from "http";
 import { MiddlewareHandler } from "../interfaces/middleware.interface";
+import { Method } from "./method";
 
 export type RouteMiddleware = {
   [method: string]: MiddlewareHandler[];
 };
 
-export class Router {
-  private routes = [];
-  private routeMiddleware: Map<string, RouteMiddleware> = new Map();
+export class Router extends Method {
+  constructor() {
+    super();
+  }
 
   route() {}
-
-  addRoute(path: string, method: string, middlewares: MiddlewareHandler[]) {
-    if (!this.routeMiddleware.has(path)) {
-      this.routeMiddleware.set(path, {});
-    }
-    const routeMiddleware = this.routeMiddleware.get(path)!;
-    routeMiddleware[method] = [...middlewares];
-  }
-
-  get(path: string, ...middlewares: MiddlewareHandler[]) {
-    this.addRoute(path, "get", middlewares);
-  }
-
-  post(path: string, ...middlewares: MiddlewareHandler[]) {
-    this.addRoute(path, "post", middlewares);
-  }
-
-  patch(path: string, ...middlewares: MiddlewareHandler[]) {
-    this.addRoute(path, "patch", middlewares);
-  }
 }
 
-const route = new Router();
+const router = new Router();
 
-route.get(
-  "/users",
-  (req: IncomingMessage, res: ServerResponse, next: () => void) => {}
-);
+// router.get();
