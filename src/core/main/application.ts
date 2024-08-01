@@ -1,22 +1,45 @@
 import http, { IncomingMessage, ServerResponse } from "http";
-import { Handler, Route } from "../interfaces/router.interface";
-import { BodyParser } from "./body-parser";
-import { MiddlewareHandler } from "../interfaces/middleware.interface";
-import { RouteMiddleware, Router } from "./route";
-import { Method } from "./method";
+import {
+  MiddlewareHandler,
+  Request,
+  Response,
+} from "../interfaces/middleware.interface";
+import { Router } from "./route";
+import { Method, RouteMiddleware, SubPath } from "./method";
+
+import { addRequestProps } from "./request";
+import { addResponseProps } from "./response";
 
 export class Application extends Method {
-  private middlewareStack: MiddlewareHandler[] = [];
-  private mainRouteMiddleware: Map<string, Map<string, RouteMiddleware>> =
-    new Map();
+  private middleware: Map<string, MiddlewareHandler[] | SubPath> = new Map();
+  private pathOnlyMiddleware: Map<string, MiddlewareHandler[]> = new Map();
+
   constructor() {
     super();
   }
 
-  addParentRoute(path: string, middleware: Map<string, RouteMiddleware>) {
-    if (!this.mainRouteMiddleware.has(path)) {
-      this.mainRouteMiddleware.set(path, middleware);
+  addMiddleware(path: string, middlewares: MiddlewareHandler[] | SubPath) {
+    if (path === "/global") {
+      if (this.middleware.has(path)) {
+        this.middleware.set(path, [
+          ...(this.middleware.get(path) as MiddlewareHandler[]),
+          ...(middlewares as MiddlewareHandler[]),
+        ]);
+      } else {
+        this.middleware.set(path, middlewares as MiddlewareHandler[]);
+      }
+    } else {
+      if (!this.middleware.has(path)) {
+        this.middleware.set(path, middlewares);
+      }
     }
+  }
+
+  get(path: string, ...middlewaressss: MiddlewareHandler[]) {
+    const rand: SubPath = new Map();
+
+    const r = rand.set(path, { get: middlewaressss });
+    this.middleware.set(path, r);
   }
 
   use(
@@ -26,79 +49,91 @@ export class Application extends Method {
     if (typeof pathOrMiddleware === "string") {
       const lastHandler = handlers[handlers.length - 1];
       if (lastHandler instanceof Router) {
-        this.addParentRoute(pathOrMiddleware, lastHandler.routeMiddleware);
+        this.addMiddleware(pathOrMiddleware, lastHandler.routeMiddleware);
       }
+      if (handlers.length > 1) {
+        const middlewareForAPath: MiddlewareHandler[] = [];
+        for (let index = 0; index < handlers.length - 1; index++) {
+          middlewareForAPath.push(handlers[index] as MiddlewareHandler);
+        }
+        this.pathOnlyMiddleware.set(pathOrMiddleware, middlewareForAPath);
+      }
+      return;
     }
 
+    this.addMiddleware("/global", [pathOrMiddleware] as MiddlewareHandler[]);
+    const moreMiddleware: MiddlewareHandler[] = [];
     for (const handler of handlers) {
       if (!(handler instanceof Router)) {
-        this.middlewareStack.push(handler);
+        moreMiddleware.push(handler);
       }
     }
+    this.addMiddleware("/global", moreMiddleware);
   }
 
-  async registerMiddleware(req: IncomingMessage, res: ServerResponse) {
-    for (let index = 0; index < this.middlewareStack.length; index++) {
-      let isNextCalled = false;
-      try {
-        const result = this.middlewareStack[index](req, res, (err: any) => {
-          if (err) {
-            throw err;
-          }
-          isNextCalled = true;
-        });
-        if ((result as any) instanceof Promise) {
-          await result;
+  async registerMiddleware(req: Request, res: Response) {
+    for (const [path, globalMiddlewareOrPathMiddleware] of this.middleware) {
+      if (path === req.pathname || path === "/global") {
+        let middlewareStack: MiddlewareHandler[] = [];
+
+        if (globalMiddlewareOrPathMiddleware instanceof Map) {
+          const routeHandler = globalMiddlewareOrPathMiddleware.get(
+            req.pathname
+          ) as RouteMiddleware;
+          const subPathHandler = routeHandler[req.method as string];
+          middlewareStack.push(...subPathHandler);
+        } else if (Array.isArray(globalMiddlewareOrPathMiddleware)) {
+          middlewareStack.push(...globalMiddlewareOrPathMiddleware);
         }
-      } catch (error: any) {
-        console.log(error);
-        res.write(error?.message);
-        res.end();
-        break;
-      }
 
-      if (!isNextCalled) {
-        console.log("I ran");
-        break;
+        for (let index = 0; index < middlewareStack.length; index++) {
+          let isNextCalled = false;
+          try {
+            const result = middlewareStack[index](req, res, (err: any) => {
+              if (err) {
+                throw err;
+              }
+              isNextCalled = true;
+            });
+            if ((result as any) instanceof Promise) {
+              await result;
+            }
+          } catch (error: any) {
+            console.log(error);
+            res.write(error?.message);
+            res.end();
+            break;
+          }
+
+          if (!isNextCalled) {
+            console.log("I ran");
+            break;
+          }
+        }
       }
     }
   }
+
+  registerAppRouteMiddleware(req: Request, res: Response) {}
 
   listen(port: number, callback: () => void) {
-    const server = http.createServer((req: IncomingMessage, res) => {
-      // Handle middleware
-      this.registerMiddleware(req, res);
-      // Handle routing
+    const server = http.createServer((req, res) => {
+      const request = addRequestProps(req);
+      const response = addResponseProps(res);
+      this.registerMiddleware(request, response);
     });
-
     server.listen(port, callback);
   }
 }
 
 const app = new Application();
-app.listen(3000, () => {
-  console.log("listening...");
+
+app.get("/me", (req, res, next) => {
+  console.log({ name: "Emmanuel", age: "26" });
+  // next(new Error("233333"));
+  res.end("This is me");
 });
 
-// app.use(async (req, res, next) => {
-//   const bodyParser = new BodyParser();
-//   await bodyParser.extractData(req, res);
-//   next();
-// });
-
-// app.use((req, res, next) => {
-//   console.log(new Date());
-//   console.log(req.body, "dddddddddddd");
-//   next();
-// });
-
-// app.use((req, res, next) => {
-//   console.log(new Date());
-//   console.log(req.body, "eeeeeeeeeeeeeeeeeee");
-//   return;
-// });
-
-app.get("/us", (req, res) => {
-  res.write(req.body.name + " " + "welcome");
-  res.end();
+app.listen(3000, () => {
+  console.log("listen on port 3000");
 });
