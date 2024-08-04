@@ -9,6 +9,7 @@ export interface Request extends http.IncomingMessage {
   query: Record<string, any>;
   pathname: string;
   method: string;
+  params: Record<string, string>;
   getParsedUrl(pathURL: string): UrlWithParsedQuery;
 }
 
