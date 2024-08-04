@@ -1,13 +1,56 @@
-import { MiddlewareHandler } from "../interfaces/middleware.interface";
+import {
+  MiddlewareHandler,
+  Request,
+  Response,
+} from "../interfaces/middleware.interface";
 import { Method } from "./method";
-
-export type RouteMiddleware = {
-  [method: string]: MiddlewareHandler[];
-};
 
 export class Router extends Method {
   constructor() {
     super();
   }
   route() {}
+
+  addSubRoutesHandler(
+    path: string,
+    method: string,
+    middlewares: MiddlewareHandler[]
+  ) {
+    let middleware = this.routeMiddleware.get(path);
+    if (!middleware) {
+      middleware = { [method]: middlewares };
+      this.routeMiddleware.set(path, middleware);
+    } else {
+      middleware[method] = middlewares;
+    }
+  }
+
+  get(path: string, ...middlewares: MiddlewareHandler[]) {
+    this.addSubRoutesHandler(path, "get", middlewares);
+  }
+
+  post(path: string, ...middlewares: MiddlewareHandler[]) {
+    this.addSubRoutesHandler(path, "post", middlewares);
+  }
+
+  patch(path: string, ...middlewares: MiddlewareHandler[]) {
+    this.addSubRoutesHandler(path, "patch", middlewares);
+  }
 }
+
+const router = new Router();
+
+router.get("/me", (req, res, next) => {
+  console.log(req.body);
+  res.end("uuuuuuuuuuu");
+});
+
+function test(req: Request, res: Response, next: any) {
+  console.log(req.params);
+  console.log(req.body);
+  res.end("thank you");
+}
+
+router.post("/user/:id/media/:mediaId", test);
+
+export { router };
