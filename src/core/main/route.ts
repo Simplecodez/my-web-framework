@@ -1,4 +1,8 @@
-import { MiddlewareHandler } from "../interfaces/middleware.interface";
+import {
+  MiddlewareHandler,
+  Request,
+  Response,
+} from "../interfaces/middleware.interface";
 import { Method } from "./method";
 
 export class Router extends Method {
@@ -40,5 +44,13 @@ router.get("/me", (req, res, next) => {
   console.log(req.body);
   res.end("uuuuuuuuuuu");
 });
+
+function test(req: Request, res: Response, next: any) {
+  console.log(req.params);
+  console.log(req.body);
+  res.end("thank you");
+}
+
+router.post("/user/:id/media/:mediaId", test);
 
 export { router };

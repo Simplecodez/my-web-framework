@@ -10,6 +10,7 @@ import { Method, RouteMiddleware, SubPath } from "./method";
 import { addRequestProps } from "./request";
 import { addResponseProps } from "./response";
 import { BodyParser } from "./body-parser";
+import { Params } from "../interfaces/utils.interface";
 import { Utils } from "./utils";
 
 export class Application extends Method {
@@ -74,45 +75,54 @@ export class Application extends Method {
 
   async registerMiddleware(req: Request, res: Response) {
     const [basePath, subPath] = Utils.splitPath(req.pathname);
-    console.log(basePath, subPath, "hhhhh");
+    let middlewareStack: MiddlewareHandler[] = [];
     for (const [path, globalMiddlewareOrPathMiddleware] of this.appMiddleware) {
       if (path === basePath || path === "/global") {
-        let middlewareStack: MiddlewareHandler[] = [];
-
         if (globalMiddlewareOrPathMiddleware instanceof Map) {
-          const routeHandler = globalMiddlewareOrPathMiddleware.get(
-            subPath
-          ) as RouteMiddleware;
-          const subPathHandler = routeHandler[req.method as string];
-          middlewareStack.push(...subPathHandler);
+          for (const [key, value] of globalMiddlewareOrPathMiddleware) {
+            const matchedPath = Utils.matchPath(key, subPath);
+
+            if (matchedPath.matched) {
+              console.log(matchedPath);
+              req.params = matchedPath.params as Params;
+              const subPathHandler = value[req.method as string];
+              if (subPathHandler) {
+                middlewareStack.push(...subPathHandler);
+                console.log(middlewareStack);
+              }
+              break;
+            }
+          }
+          break;
         } else if (Array.isArray(globalMiddlewareOrPathMiddleware)) {
           middlewareStack.push(...globalMiddlewareOrPathMiddleware);
         }
+      }
+    }
 
-        for (let index = 0; index < middlewareStack.length; index++) {
-          let isNextCalled = false;
-          try {
-            const result = middlewareStack[index](req, res, (err: any) => {
-              if (err) {
-                throw err;
-              }
-              isNextCalled = true;
-            });
-            if ((result as any) instanceof Promise) {
-              await result;
-            }
-          } catch (error: any) {
-            console.log(error);
-            res.write(error?.message);
-            res.end();
-            break;
+    for (let index = 0; index < middlewareStack.length; index++) {
+      console.log(middlewareStack.length);
+      let isNextCalled = false;
+      try {
+        const result = middlewareStack[index](req, res, (err: any) => {
+          if (err) {
+            throw err;
           }
-
-          if (!isNextCalled) {
-            console.log("I ran");
-            break;
-          }
+          isNextCalled = true;
+        });
+        if ((result as any) instanceof Promise) {
+          await result;
         }
+      } catch (error: any) {
+        console.log(error);
+        res.write(error?.message);
+        res.end();
+        break;
+      }
+
+      if (!isNextCalled) {
+        console.log("I ran");
+        break;
       }
     }
   }
@@ -133,7 +143,7 @@ const app = new Application();
 
 app.get("/me", (req, res, next) => {
   console.log({ name: "Emmanuel", age: "26" });
-  console.log(req.body);
+  console.log(req.query.page);
   res.end("This is me");
 });
 

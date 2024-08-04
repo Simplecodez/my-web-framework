@@ -1,11 +1,4 @@
-interface Params {
-  [key: string]: string;
-}
-
-interface MatchResult {
-  matched: boolean;
-  params?: Params;
-}
+import { MatchResult, Params } from "../interfaces/utils.interface";
 
 export class Utils {
   static splitPath(path: string): [string, string] {
