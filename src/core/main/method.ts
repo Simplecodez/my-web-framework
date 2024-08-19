@@ -6,7 +6,7 @@ export type RouteMiddleware = {
 
 export type SubPath = Map<string, RouteMiddleware>;
 
-export class Method {
+export abstract class Method {
   public routeMiddleware: SubPath = new Map();
   protected middleware: Map<string, MiddlewareHandler[] | SubPath> = new Map();
 
