@@ -1,5 +1,4 @@
 import { IncomingMessage, ServerResponse } from "http";
-import { MiddlewareHandler } from "../interfaces/middleware.interface";
 
 export class BodyParser {
   private dataBinary: Buffer[] = [];
