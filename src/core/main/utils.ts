@@ -5,13 +5,13 @@ export class Utils {
     const segments = path.split("/").filter((segment) => segment !== "");
     const basePath = `/${segments[0]}`;
     const subPath =
-      segments.length > 1 ? `/${segments.slice(1).join("/")}` : basePath;
+      segments.length > 1 ? `/${segments.slice(1).join("/")}` : "/";
 
     return [basePath, subPath];
   }
 
   private static isValidPath(path: string): boolean {
-    const maxPathLength = 2000;
+    const maxPathLength = 800;
     const validPathRegex = /^[a-zA-Z0-9-_/]+$/;
     return path.length <= maxPathLength && validPathRegex.test(path);
   }

@@ -21,9 +21,9 @@ export class Method {
     // if no path, then create a new one and add subpath
     if (!middlewareSubPath) {
       middlewareSubPath = new Map<string, RouteMiddleware>();
-      middlewareSubPath.set(path, { [method]: middlewares });
+      middlewareSubPath.set("/", { [method]: middlewares });
     } else {
-      // else, add a new method an middleware array
+      // else, add a new method to a middleware array
       const middlewareSubPathHandler = middlewareSubPath.get(
         path
       ) as RouteMiddleware;
