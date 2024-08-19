@@ -2,7 +2,9 @@ import http from "http";
 import { UrlWithParsedQuery } from "url";
 
 export interface Response extends http.ServerResponse {
-  send(): any;
+  send(data: any): void;
+  status(code: number): Response;
+  json(data: object): void;
 }
 
 export interface Request extends http.IncomingMessage {
