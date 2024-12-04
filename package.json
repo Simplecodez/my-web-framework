@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon test.ts",
+    "dev": "ts-node test.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -11,7 +11,11 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@types/body-parser": "^1.19.5",
     "@types/node": "^20.14.11",
     "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.3"
   }
 }
