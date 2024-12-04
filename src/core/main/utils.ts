@@ -40,7 +40,7 @@ export class Utils {
     return { matched: true, params };
   }
 
-  static getFullPath(path: string, key: string) {
-    return `${path.replace(/\/$/, '')}/${key.replace(/^\//, '')}`;
+  static getFullPath(path: string, subPath: string) {
+    return `${path.replace(/\/$/, '')}/${subPath.replace(/^\//, '')}`;
   }
 }
