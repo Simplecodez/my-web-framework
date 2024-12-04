@@ -1,6 +1,6 @@
 import http from 'http';
 import { UrlWithParsedQuery } from 'url';
-import { NextFunction } from './router.interface';
+export type NextFunction = (err?: any) => void;
 
 export interface Response extends http.ServerResponse {
   send(data: any): void;
