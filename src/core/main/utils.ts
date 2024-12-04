@@ -1,11 +1,10 @@
-import { MatchResult, Params } from "../interfaces/utils.interface";
+import { MatchResult, Params } from '../interfaces/utils.interface';
 
 export class Utils {
   static splitPath(path: string): [string, string] {
-    const segments = path.split("/").filter((segment) => segment !== "");
+    const segments = path.split('/').filter((segment) => segment !== '');
     const basePath = `/${segments[0]}`;
-    const subPath =
-      segments.length > 1 ? `/${segments.slice(1).join("/")}` : "/";
+    const subPath = segments.length > 1 ? `/${segments.slice(1).join('/')}` : '/';
 
     return [basePath, subPath];
   }
@@ -23,7 +22,7 @@ export class Utils {
     const paramNames: string[] = [];
     const regexPath = template.replace(/:(\w+)/g, (_, paramName) => {
       paramNames.push(paramName);
-      return "([^/]+)";
+      return '([^/]+)';
     });
 
     const pathRegex = new RegExp(`^${regexPath}$`);
@@ -39,5 +38,9 @@ export class Utils {
     });
 
     return { matched: true, params };
+  }
+
+  static getFullPath(path: string, key: string) {
+    return `${path.replace(/\/$/, '')}/${key.replace(/^\//, '')}`;
   }
 }
