@@ -1,4 +1,4 @@
-import { MiddlewareHandler } from "../interfaces/middleware.interface";
+import { MiddlewareHandler } from '../interfaces/middleware.interface';
 
 export type RouteMiddleware = {
   [method: string]: MiddlewareHandler[];
@@ -7,44 +7,101 @@ export type RouteMiddleware = {
 export type SubPath = Map<string, RouteMiddleware>;
 
 export abstract class Method {
+  protected path: string = '';
   public routeMiddleware: SubPath = new Map();
-  protected middleware: Map<string, MiddlewareHandler[] | SubPath> = new Map();
 
-  private addRoute(
-    path: string,
+  /**
+   * Sets the base path for the instance and enables method chaining.
+   *
+   * @param {string} path - The base route path.
+   * @returns {this} The current instance for chaining.
+   *
+   * @example
+   * method.route('/api')
+   *   .get('/users', (req, res) => res.send('User list'))
+   *   .post('/users', (req, res) => res.send('User created'));
+   */
+  route(path: string) {
+    this.path = path;
+    return this;
+  }
+
+  private addRoute(path: string, method: string, middlewares: MiddlewareHandler[]) {
+    if (typeof path !== 'string') {
+      throw new Error('Invalid input: path must be strings.');
+    }
+
+    if (
+      !Array.isArray(middlewares) ||
+      !middlewares.every((fn) => typeof fn === 'function')
+    ) {
+      throw new Error('Invalid input: middlewares must be an array of functions.');
+    }
+
+    let existingPath = this.routeMiddleware.get(path);
+
+    if (existingPath && existingPath[method]) {
+      console.warn(`Overwriting middleware for ${method.toUpperCase()} ${path}`);
+    }
+
+    if (!existingPath) {
+      existingPath = { [method]: middlewares };
+    } else {
+      existingPath = { ...existingPath, [method]: middlewares };
+    }
+    this.routeMiddleware.set(path, existingPath);
+  }
+
+  private registerRoute(
+    path: string | MiddlewareHandler,
     method: string,
     middlewares: MiddlewareHandler[]
   ) {
-    // Get main path using path variable
-    let middlewareSubPath = this.middleware.get(path) as SubPath;
-
-    // if no path, then create a new one and add subpath
-    if (!middlewareSubPath) {
-      middlewareSubPath = new Map<string, RouteMiddleware>();
-      middlewareSubPath.set("/", { [method]: middlewares });
-    } else {
-      // else, add a new method to a middleware array
-      const middlewareSubPathHandler = middlewareSubPath.get(
-        path
-      ) as RouteMiddleware;
-
-      if (middlewareSubPathHandler) {
-        middlewareSubPathHandler[method] = middlewares;
-      }
-      middlewareSubPath.set(path, middlewareSubPathHandler);
+    if (typeof path === 'string') {
+      this.addRoute(path, method, middlewares);
+      return;
     }
-    this.middleware.set(path, middlewareSubPath);
+
+    if (!this.path) {
+      throw new Error('No path specified');
+    }
+
+    this.addRoute(this.path, method, [path, ...middlewares]);
   }
 
-  get(path: string, ...middlewares: MiddlewareHandler[]) {
-    this.addRoute(path, "get", middlewares);
+  /**
+   * Registers a GET route with the specified path and middlewares.
+   *
+   * @param {string} path - The route path.
+   * @param {...MiddlewareHandler[]} middlewares - Middleware functions for the GET request.
+   * @returns {this} The current instance for chaining.
+   */
+  get(path: string | MiddlewareHandler, ...middlewares: MiddlewareHandler[]) {
+    this.registerRoute(path, 'get', middlewares);
+    return this;
   }
 
-  post(path: string, ...middlewares: MiddlewareHandler[]) {
-    this.addRoute(path, "post", middlewares);
+  /**
+   * Registers a POST route with the specified path and middlewares.
+   *
+   * @param {string} path - The route path.
+   * @param {...MiddlewareHandler[]} middlewares - Middleware functions for the GET request.
+   * @returns {this} The current instance for chaining.
+   */
+  post(path: string | MiddlewareHandler, ...middlewares: MiddlewareHandler[]) {
+    this.registerRoute(path, 'post', middlewares);
+    return this;
   }
 
-  patch(path: string, ...middlewares: MiddlewareHandler[]) {
-    this.addRoute(path, "patch", middlewares);
+  /**
+   * Registers a PATCH route with the specified path and middlewares.
+   *
+   * @param {string} path - The route path.
+   * @param {...MiddlewareHandler[]} middlewares - Middleware functions for the GET request.
+   * @returns {this} The current instance for chaining.
+   */
+  patch(path: string | MiddlewareHandler, ...middlewares: MiddlewareHandler[]) {
+    this.registerRoute(path, 'patch', middlewares);
+    return this;
   }
 }
