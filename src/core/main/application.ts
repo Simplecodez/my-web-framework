@@ -46,15 +46,15 @@ export class Application extends Method {
     routeHandler: Router,
     pathGlobalMiddleware: MiddlewareHandler[]
   ) {
-    for (const [key, value] of routeHandler.routeMiddleware) {
+    for (const [subPath, value] of routeHandler.routeMiddleware) {
       if (this.globalMiddlewareStore.length > 0) {
         for (const method in value) {
           value[method].unshift(...pathGlobalMiddleware);
           value[method].unshift(...this.globalMiddlewareStore);
         }
       }
-      let fullPath = Utils.getFullPath(path, key);
-      if (key === '/') {
+      let fullPath = Utils.getFullPath(path, subPath);
+      if (subPath === '/') {
         fullPath = path;
       }
       this.pathMiddlewareAndHandler.set(fullPath, value);
