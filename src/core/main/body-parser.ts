@@ -1,30 +1,42 @@
-import { IncomingMessage, ServerResponse } from "http";
+import { IncomingMessage, ServerResponse } from 'http';
 
-export class BodyParser {
-  private dataBinary: Buffer[] = [];
-
-  public async extractData(req: IncomingMessage, res: ServerResponse) {
+class BodyParser {
+  public extractData = async (
+    req: IncomingMessage,
+    res: ServerResponse,
+    next: () => void
+  ) => {
+    const dataBinary: Buffer[] = [];
     return new Promise<void>((resolve, reject) => {
-      req.on("data", (chunk: Buffer) => {
-        this.dataBinary.push(chunk);
+      req.on('data', (chunk: Buffer) => {
+        dataBinary.push(chunk);
       });
 
-      req.on("end", () => {
-        req.body = this.parseData(req.headers["content-type"] as string);
+      req.on('end', () => {
+        req.body = this.parseData(req.headers['content-type'] as string, dataBinary);
         resolve();
+        next();
       });
 
-      req.on("error", (err) => {
+      req.on('error', (err) => {
         reject(err);
       });
     });
-  }
+  };
 
-  private parseData(contentType: string) {
-    const buffer = Buffer.concat(this.dataBinary);
+  private parseData(contentType: string, dataBinary: Buffer[]) {
+    const buffer = Buffer.concat(dataBinary);
+    const stringdata = buffer.toString('utf8').trim();
 
-    const stringdata = buffer.toString("utf8");
-    if (contentType === "application/json") return JSON.parse(stringdata);
-    else console.log(stringdata);
+    if (contentType === 'application/json') {
+      try {
+        return JSON.parse(stringdata);
+      } catch (error) {
+        console.error('Error parsing JSON:', error);
+        throw new Error('Invalid JSON format');
+      }
+    }
   }
 }
+
+export default new BodyParser();
