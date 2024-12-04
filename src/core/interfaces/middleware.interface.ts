@@ -1,5 +1,6 @@
-import http from "http";
-import { UrlWithParsedQuery } from "url";
+import http from 'http';
+import { UrlWithParsedQuery } from 'url';
+import { NextFunction } from './router.interface';
 
 export interface Response extends http.ServerResponse {
   send(data: any): void;
@@ -15,8 +16,4 @@ export interface Request extends http.IncomingMessage {
   getParsedUrl(pathURL: string): UrlWithParsedQuery;
 }
 
-export type MiddlewareHandler = (
-  req: Request,
-  res: Response,
-  next: (err?: any) => void
-) => void;
+export type MiddlewareHandler = (req: Request, res: Response, next: NextFunction) => void;
