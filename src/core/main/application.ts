@@ -1,5 +1,6 @@
 import http from 'http';
 import {
+  GlobalErrorHandler,
   MiddlewareHandler,
   NextFunction,
   Request,
@@ -67,9 +68,7 @@ export class Application extends Method {
   ) {
     for (const handler of handlers) {
       if (handler instanceof Router) {
-        throw Error(
-          'Invalid middleware signature. Remove Router instance for global middleware.'
-        );
+        throw Error(errMsg);
       }
     }
   }
@@ -78,32 +77,39 @@ export class Application extends Method {
     req: Request,
     res: Response,
     index: number,
-    methodMiddlewareHandler: MiddlewareHandler[]
+    methodMiddlewareHandler: (MiddlewareHandler | GlobalErrorHandler)[]
   ): NextFunction {
     const next = (err: any): void => {
-      if (err) {
-        if (err instanceof Error) {
-          throw err;
-        } else {
-          throw new Error('Argument must be an instance of Error.');
+      if (index >= methodMiddlewareHandler.length) {
+        if (err) {
+          res.status(500).send('Internal server error');
+          if (err instanceof Error) {
+            throw err;
+          } else {
+            throw new Error('Provide a global error handler');
+          }
         }
       }
 
-      if (index >= methodMiddlewareHandler.length) {
-        return;
-      }
+      const eachMiddleware = methodMiddlewareHandler[index++];
 
-      try {
-        methodMiddlewareHandler[index++](req, res, next);
-      } catch (err: any) {
-        next(err);
+      if (err) {
+        if (eachMiddleware.length === 4) {
+          (eachMiddleware as GlobalErrorHandler)(err, req, res, next);
+        } else {
+          next(err);
+        }
+      } else {
+        if (eachMiddleware.length < 4) {
+          (eachMiddleware as MiddlewareHandler)(req, res, next);
+        }
       }
     };
     return next;
   }
 
   use(
-    pathOrMiddleware: string | MiddlewareHandler,
+    pathOrMiddleware: string | MiddlewareHandler | GlobalErrorHandler,
     ...handlers: (Router | MiddlewareHandler)[]
   ) {
     // Add path handlers to pathMiddleware container
@@ -130,12 +136,22 @@ export class Application extends Method {
       return;
     }
 
+    // adds global error handler
+    if (pathOrMiddleware.length === 4) {
+      for (const [path, routeHandler] of this.pathMiddlewareAndHandler) {
+        for (const method in routeHandler) {
+          routeHandler[method].push(pathOrMiddleware);
+        }
+      }
+      return;
+    }
+
     const errMsg =
       'Invalid middleware signature. Remove Router instance for global middleware.';
     this.handleCasesOfRouterAndMiddlewareMix(handlers, errMsg);
 
     this.globalMiddlewareStore.push(
-      pathOrMiddleware,
+      pathOrMiddleware as MiddlewareHandler,
       ...(handlers as MiddlewareHandler[])
     );
   }
@@ -143,7 +159,7 @@ export class Application extends Method {
   async requestHandler(req: Request, res: Response) {
     const { pathname, method } = req;
 
-    const methodMiddlewareHandler: MiddlewareHandler[] = [];
+    const methodMiddlewareHandler: (MiddlewareHandler | GlobalErrorHandler)[] = [];
 
     for (const [path, handler] of this.pathMiddlewareAndHandler) {
       const matchedPath = Utils.matchPath(path, pathname);
@@ -155,8 +171,7 @@ export class Application extends Method {
     }
 
     let index = 0;
-    const next = this.nextFunction(req, res, index, methodMiddlewareHandler);
-    next();
+    this.nextFunction(req, res, index, methodMiddlewareHandler)();
   }
 
   toRequestListener() {
@@ -173,7 +188,7 @@ export class Application extends Method {
     const server = http.createServer((req, res) => {
       const request = addRequestProps(req);
       const response = addResponseProps(res);
-      this.requestHandler(request, response);
+      return this.requestHandler(request, response);
     });
     server.listen(port, callback);
   }

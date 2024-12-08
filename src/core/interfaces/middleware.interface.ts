@@ -17,3 +17,10 @@ export interface Request extends http.IncomingMessage {
 }
 
 export type MiddlewareHandler = (req: Request, res: Response, next: NextFunction) => void;
+
+export type GlobalErrorHandler = (
+  err: any,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => void;

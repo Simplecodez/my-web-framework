@@ -1,7 +1,10 @@
-import { MiddlewareHandler } from '../interfaces/middleware.interface';
+import {
+  GlobalErrorHandler,
+  MiddlewareHandler
+} from '../interfaces/middleware.interface';
 
 export type RouteMiddleware = {
-  [method: string]: MiddlewareHandler[];
+  [method: string]: (MiddlewareHandler | GlobalErrorHandler)[];
 };
 
 export type SubPath = Map<string, RouteMiddleware>;
