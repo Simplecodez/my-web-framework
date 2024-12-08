@@ -1,14 +1,22 @@
-import { MiddlewareHandler } from '../interfaces/middleware.interface';
+import EventEmitter from 'events';
+import {
+  GlobalErrorHandler,
+  MiddlewareHandler
+} from '../interfaces/middleware.interface';
 
 export type RouteMiddleware = {
-  [method: string]: MiddlewareHandler[];
+  [method: string]: (MiddlewareHandler | GlobalErrorHandler)[];
 };
 
 export type SubPath = Map<string, RouteMiddleware>;
 
-export abstract class Method {
+export abstract class Method extends EventEmitter {
   protected path: string = '';
   public routeMiddleware: SubPath = new Map();
+
+  constructor() {
+    super();
+  }
 
   /**
    * Sets the base path for the instance and enables method chaining.
