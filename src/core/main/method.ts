@@ -1,4 +1,3 @@
-import EventEmitter from 'events';
 import {
   GlobalErrorHandler,
   MiddlewareHandler
@@ -10,13 +9,9 @@ export type RouteMiddleware = {
 
 export type SubPath = Map<string, RouteMiddleware>;
 
-export abstract class Method extends EventEmitter {
+export abstract class Method {
   protected path: string = '';
   public routeMiddleware: SubPath = new Map();
-
-  constructor() {
-    super();
-  }
 
   /**
    * Sets the base path for the instance and enables method chaining.
