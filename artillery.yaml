@@ -1,0 +1,33 @@
+config:
+  http:
+    timeout: 110000
+  target: http://localhost:3000
+  phases:
+    - duration: 60
+      arrivalRate: 1
+      rampTo: 5
+      name: Warm up
+    - duration: 60
+      arrivalRate: 5
+      rampTo: 10
+      name: Ramp up
+    - duration: 30
+      arrivalRate: 10
+      rampTo: 30
+      name: Spike
+  plugins:
+    ensure: {}
+    apdex: {}
+    metrics-by-endpoint: {}
+  apdex:
+    threshold: 900
+  ensure:
+    thresholds:
+      - http.response_time.p99: 900
+      - http.response_time.p95: 850
+scenarios:
+  - flow:
+      - loop:
+          - get:
+              url: '/users'
+        count: 100
