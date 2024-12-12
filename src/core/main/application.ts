@@ -13,6 +13,12 @@ import { addResponseProps } from './response';
 import { Params } from '../interfaces/utils.interface';
 import { Utils } from './utils';
 
+/**
+ * The `Application` class serves as the core framework for handling HTTP requests, middleware, and routing.
+ * It provides mechanisms for global middleware, path-specific middleware, and request routing.
+ *
+ * @extends Method
+ */
 export class Application extends Method {
   private globalMiddlewareStore: MiddlewareHandler[] = [];
   private pathGlobalMiddleware: Map<string, MiddlewareHandler[]> = new Map();
@@ -42,6 +48,14 @@ export class Application extends Method {
     return pathGlobalMiddleware;
   }
 
+  /**
+   * Prepends path-specific and global middleware to route handlers and updates the middleware map.
+   *
+   * @private
+   * @param {string} path - The base path for the route.
+   * @param {Router} routeHandler - The router instance containing middleware and handlers for subpaths.
+   * @param {MiddlewareHandler[]} pathGlobalMiddleware - An array of middleware specific to the given path.
+   */
   private prependPathAndGlobalMiddleware(
     path: string,
     routeHandler: Router,
@@ -73,6 +87,17 @@ export class Application extends Method {
     }
   }
 
+  /**
+   * Handles the execution of middleware and error handlers in sequence for a specific request and response cycle.
+   *
+   * @private
+   * @param {Request} req - The HTTP request object.
+   * @param {Response} res - The HTTP response object.
+   * @param {number} index - The current index of the middleware in the execution chain.
+   * @param {(MiddlewareHandler | GlobalErrorHandler)[]} methodMiddlewareHandler - The list of middleware
+   * and/or global error handlers to execute.
+   * @returns {NextFunction} The `next` function to call the next middleware or handle an error.
+   */
   private nextFunction(
     req: Request,
     res: Response,
@@ -90,7 +115,6 @@ export class Application extends Method {
           }
         }
       }
-
       const eachMiddleware = methodMiddlewareHandler[index++];
 
       if (err) {
@@ -101,13 +125,26 @@ export class Application extends Method {
         }
       } else {
         if (eachMiddleware.length < 4) {
-          (eachMiddleware as MiddlewareHandler)(req, res, next);
+          try {
+            (eachMiddleware as MiddlewareHandler)(req, res, next);
+          } catch (err) {
+            next(err);
+          }
         }
       }
     };
     return next;
   }
 
+  /**
+   * Registers middleware, routers, or global error handlers.
+   *
+   * @param {string | MiddlewareHandler | GlobalErrorHandler} pathOrMiddleware - A route path (string),
+   * a middleware handler, or a global error handler (if arity is 4).
+   * @param {...(Router | MiddlewareHandler)[]} handlers - Additional middleware or router instances.
+   *
+   * @throws {Error} Throws an error if a `Router` instance is mixed with middleware in an invalid way.
+   */
   use(
     pathOrMiddleware: string | MiddlewareHandler | GlobalErrorHandler,
     ...handlers: (Router | MiddlewareHandler)[]
@@ -156,6 +193,13 @@ export class Application extends Method {
     );
   }
 
+  /**
+   * Handles incoming HTTP requests by matching paths and executing middleware or handlers.
+   *
+   * @param {Request} req - The HTTP request object.
+   * @param {Response} res - The HTTP response object.
+   * @async
+   */
   async requestHandler(req: Request, res: Response) {
     const { pathname, method } = req;
 
@@ -174,15 +218,27 @@ export class Application extends Method {
     this.nextFunction(req, res, index, methodMiddlewareHandler)();
   }
 
+  /**
+   * Converts the current instance into a request listener compatible with Node.js HTTP servers.
+   *
+   * @returns {(req: http.IncomingMessage, res: http.ServerResponse) => void} A function that acts as a request listener,
+   * handling incoming requests and responses.
+   */
   toRequestListener() {
     return (req: http.IncomingMessage, res: http.ServerResponse) => {
       const request = addRequestProps(req);
       const response = addResponseProps(res);
       this.loadMiddleware();
-      this.requestHandler(request, response);
+      return this.requestHandler(request, response);
     };
   }
 
+  /**
+   * Starts the HTTP server and listens for incoming requests on the specified port.
+   *
+   * @param {number} port - The port number on which the server will listen.
+   * @param {() => void} callback - A callback function executed once the server starts listening.
+   */
   listen(port: number, callback: () => void) {
     this.loadMiddleware();
     const server = http.createServer((req, res) => {

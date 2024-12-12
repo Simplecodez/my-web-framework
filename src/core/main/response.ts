@@ -1,6 +1,13 @@
 import http from 'http';
 import { Response } from '../interfaces/middleware.interface';
 
+/**
+ * Enhances a `http.ServerResponse` object with additional utility methods for
+ * sending responses, setting status codes, and returning JSON responses.
+ *
+ * @param {http.ServerResponse} res - The original Node.js server response object.
+ * @returns {Response} The enhanced response object with additional properties and methods.
+ */
 export const addResponseProps = (res: http.ServerResponse): Response => {
   (res as Response).send = (data: any) => {
     let contentType: string;
